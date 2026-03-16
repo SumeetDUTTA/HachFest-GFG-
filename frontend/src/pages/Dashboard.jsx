@@ -124,7 +124,28 @@ const Dashboard = () => {
         <AnimatePresence mode="wait">
           {isLoading ? (
             <LoadingSkeleton key="skeleton" />
-          ) : isGenerated ? (
+          ) : error ? (
+            <motion.div 
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-6 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-4"
+            >
+              <div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h3 className="text-[14px] font-bold text-red-900">Analysis Failed</h3>
+                <p className="text-[13px] text-red-700 mt-1">{error}</p>
+                <button 
+                  onClick={() => setError(null)}
+                  className="mt-3 text-[12px] font-bold text-red-600 hover:text-red-800 uppercase tracking-wider"
+                >
+                  Clear Error
+                </button>
+              </div>
+            </motion.div>
+          ) : isGenerated && dashboardData ? (
             <motion.div
               key="grid"
               initial={{ opacity: 0, y: 10 }}

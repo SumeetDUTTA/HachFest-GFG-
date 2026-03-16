@@ -49,6 +49,9 @@ const FileUploader = ({ initialDataset = null, onUploadSuccess, onClearDataset }
     }
   };
 
+  const [uploadResult, setUploadResult] = useState(null);
+  const [error, setError] = useState(null);
+
   const handleDrop = (e) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
@@ -91,7 +94,7 @@ const FileUploader = ({ initialDataset = null, onUploadSuccess, onClearDataset }
                ) : <Upload size={20} />}
             </div>
             <p className="text-[14px] font-semibold text-[#111827]">
-              {isUploading ? 'Uploading records...' : 'Click or drag dataset to upload'}
+              {isUploading ? 'Refreshing Dataset...' : 'Click or drag CSV to upload'}
             </p>
             <p className="text-[12px] text-[#6B7280] mt-1">CSV up to 50MB</p>
             {uploadError && <p className="text-[12px] text-rose-600 mt-3">{uploadError}</p>}
