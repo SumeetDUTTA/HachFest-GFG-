@@ -3,13 +3,7 @@ import { History as HistoryIcon, Search, Calendar, ChevronRight } from 'lucide-r
 import { motion } from 'framer-motion';
 
 const History = () => {
-  const archives = [
-    { query: "Monthly revenue trends for Q4", date: "2h ago", status: "Rendered", records: 1204 },
-    { query: "Customer churn by region", date: "Yesterday", status: "Archived", records: 850 },
-    { query: "Inventory turnover rates", date: "3d ago", status: "Archived", records: 4320 },
-    { query: "Top sales contributors", date: "Last week", status: "Archived", records: 92 },
-    { query: "Regional supply chain leak", date: "Mar 11", status: "Archived", records: 512 },
-  ];
+  const archives = [];
 
   return (
     <div className="space-y-6">

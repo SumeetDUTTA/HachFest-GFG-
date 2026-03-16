@@ -17,14 +17,7 @@ CACHE_ENABLED = True
 CACHE_MAX_ENTRIES = int(os.getenv("CACHE_MAX_ENTRIES", "200"))
 RATE_LIMIT_REQUESTS_PER_MINUTE = 30
 ENABLE_DETAILED_ERRORS = os.getenv("ENABLE_DETAILED_ERRORS", "false").lower() == "true"
-ALLOWED_ORIGINS = [
-	origin.strip()
-	for origin in os.getenv(
-		"ALLOWED_ORIGINS",
-		"http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173",
-	).split(",")
-	if origin.strip()
-]
+ALLOWED_ORIGINS = ["*"]
 ENABLE_API_KEY_AUTH = os.getenv("ENABLE_API_KEY_AUTH", "false").lower() == "true"
 API_KEY_HEADER_NAME = os.getenv("API_KEY_HEADER_NAME", "x-api-key").strip().lower()
 API_KEYS = {

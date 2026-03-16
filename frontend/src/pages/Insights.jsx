@@ -3,40 +3,7 @@ import { Lightbulb, TrendingUp, Target, Users, ArrowUpRight, Sparkles } from 'lu
 import { motion } from 'framer-motion';
 
 const Insights = () => {
-  const data = [
-    { 
-      icon: TrendingUp, 
-      color: 'blue', 
-      title: 'Revenue Optimization', 
-      desc: 'Suggest 15% pricing increase on Cloud Suite X for $40k MRR boost.',
-      impact: '+$40k/mo',
-      tag: 'Strategic'
-    },
-    { 
-      icon: Target, 
-      color: 'emerald', 
-      title: 'Market Expansion', 
-      desc: 'Tier 2 cities show 3x more efficiency than Tier 1 in current LTV.',
-      impact: '3x ROI',
-      tag: 'Growth'
-    },
-    { 
-      icon: Users, 
-      color: 'amber', 
-      title: 'Segment Discovery', 
-      desc: 'Identified high-value segment: Executive 35-45 with 80% higher LTV.',
-      impact: '+80% LTV',
-      tag: 'Audience'
-    },
-    { 
-      icon: Lightbulb, 
-      color: 'indigo', 
-      title: 'Efficiency Gain', 
-      desc: 'Consolidating logistics in East reduces operational costs by 12%.',
-      impact: '-12% Cost',
-      tag: 'Ops'
-    }
-  ];
+  const data = [];
 
   return (
     <div className="space-y-6">
@@ -52,7 +19,7 @@ const Insights = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-        {data.map((item, idx) => (
+        {data.length > 0 ? data.map((item, idx) => (
           <motion.div 
             key={idx}
             initial={{ opacity: 0, y: 10 }}
@@ -81,7 +48,13 @@ const Insights = () => {
                </button>
             </div>
           </motion.div>
-        ))}
+        )) : (
+          <div className="col-span-2 h-[200px] border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center bg-slate-50/50">
+            <Sparkles className="text-blue-400 mb-3" size={32} />
+            <p className="text-[14px] font-semibold text-slate-900">No Insights Yet</p>
+            <p className="text-[12px] text-slate-500">Run a dashboard query to generate strategic intelligence.</p>
+          </div>
+        )}
       </div>
     </div>
   );
