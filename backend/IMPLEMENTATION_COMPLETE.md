@@ -17,7 +17,7 @@ I've successfully implemented the **complete AI brain** for your conversational 
    - `GET /schema` — Get available columns & data info
    - `GET /health` — Health check
 
-2. **`llm_engine.py`** — Google Gemini API integration:
+2. **`llm_engine.py`** — Ollama local LLM integration:
    - Domain-aware prompt engineering with full schema context
    - Generates pandas code + chart recommendations
    - Few-shot examples for better accuracy
@@ -47,7 +47,7 @@ I've successfully implemented the **complete AI brain** for your conversational 
 
 - **`config.py`** — Environment variables, paths, API settings
 - **`requirements.txt`** — Python dependencies (all pinned versions)
-- **`.env.example`** — Template for API credentials
+- **`.env.example`** — Template for runtime settings
 - **`test_prompts.py`** — Comprehensive test suite (5/5 passing)
 
 #### **Documentation**
@@ -66,7 +66,7 @@ TEST SUMMARY
 ✓ PASS: Data Loader (loads 11,789 rows, 25 columns)
 ✓ PASS: Query Executor (validates & executes queries safely)
 ✓ PASS: Chart Selector (recommends chart types)
-✓ PASS: LLM Engine (Gemini API integration ready)
+✓ PASS: LLM Engine (Ollama runtime integration ready)
 ✓ PASS: End-to-End (full pipeline working)
 
 Total: 5/5 tests passed
@@ -76,12 +76,12 @@ Total: 5/5 tests passed
 
 ## 🚀 How To Use It
 
-### Phase 1: Get API Key (2 min)
+### Phase 1: Install Ollama (2 min)
 
 ```
-1. Visit: https://aistudio.google.com/app/apikey
-2. Create API key (free tier available)
-3. Copy the key
+1. Install from: https://ollama.com/download
+2. Start runtime: ollama serve
+3. Pull model: ollama pull qwen2.5-coder:7b
 ```
 
 ### Phase 2: Configure
@@ -89,7 +89,7 @@ Total: 5/5 tests passed
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and add: GEMINI_API_KEY=your_api_key_here
+# Optional: set OLLAMA_MODEL in .env
 ```
 
 ### Phase 3: Run Server
@@ -235,7 +235,7 @@ Simple health check.
 |-----------|-----------|---------|
 | API Framework | FastAPI | 0.115.0 |
 | Server | Uvicorn | 0.30.0 |
-| LLM API | Google Gemini | 0.8.0 |
+| LLM Runtime | Ollama (local) | latest |
 | Data Processing | Pandas | 2.2.0 |
 | Type Validation | Pydantic | 2.10.0 |
 | Config | Python-dotenv | 1.0.1 |
@@ -247,7 +247,7 @@ Simple health check.
 ```
 backend/
 ├── main.py              ← Main application (start here)
-├── llm_engine.py        ← Gemini API wrapper
+├── llm_engine.py        ← Ollama local wrapper
 ├── query_executor.py    ← Query validation & execution
 ├── chart_selector.py    ← Chart recommendations
 ├── data_loader.py       ← CSV/Excel loader
@@ -264,9 +264,9 @@ backend/
 
 ## 🚀 Next Steps
 
-1. **Add API Key**
-   - Get from <https://aistudio.google.com/app/apikey>
-   - Add to `.env` as `GEMINI_API_KEY=...`
+1. **Install and Start Ollama**
+   - Install from <https://ollama.com/download>
+   - Run `ollama serve`, then `ollama pull qwen2.5-coder:7b`
 
 2. **Start Server**
 
@@ -343,7 +343,7 @@ backend/
 
 | Issue | Solution |
 |-------|----------|
-| "GEMINI_API_KEY not set" | Add key to `.env` file (copy from AI Studio) |
+| "Ollama runtime not reachable" | Start Ollama and verify `http://localhost:11434/api/tags` |
 | "Module not found" | Run `pip install -r requirements.txt` from backend/ |
 | "CSV not found" | RUN from backend/ directory with parent having Excel file |
 | "Port 8000 in use" | Change port: `--port 8001` in uvicorn command |
@@ -353,7 +353,7 @@ backend/
 
 ## 📞 Quick Links
 
-- **Gemini API Key**: <https://aistudio.google.com/app/apikey>
+- **Ollama**: <https://ollama.com/download>
 - **FastAPI Docs**: <https://fastapi.tiangolo.com>
 - **Pandas Docs**: <https://pandas.pydata.org>
 
@@ -363,4 +363,4 @@ backend/
 
 Your AI brain is fully implemented, tested, and ready to power conversational dashboards.
 
-**Next action**: Get your Gemini API key and start the server! 🚀
+**Next action**: Start Ollama, pull a model, and start the server! 🚀

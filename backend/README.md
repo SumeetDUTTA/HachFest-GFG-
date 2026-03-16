@@ -22,7 +22,7 @@ This is the **AI backend** that powers the conversational BI dashboard system. I
         ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ LLM Engine (llm_engine.py)                                  │
-│ - Google Gemini API integration                             │
+│ - Ollama local LLM integration                              │
 │ - Schema-aware prompt engineering                           │
 │ - Generates pandas code + chart recommendation              │
 └─────────────────────────────────────────────────────────────┘
@@ -52,7 +52,7 @@ This is the **AI backend** that powers the conversational BI dashboard system. I
 ## 📋 Files
 
 - **main.py** — FastAPI application with endpoints
-- **llm_engine.py** — Google Gemini API integration + prompt engineering
+- **llm_engine.py** — Ollama local LLM integration + prompt engineering
 - **query_executor.py** — Pandas query generation, execution, validation
 - **chart_selector.py** — Chart type recommendation & config generation
 - **data_loader.py** — CSV loading, schema extraction, metadata provider
@@ -70,11 +70,11 @@ cd backend
 pip install -r requirements.txt
 ```
 
-### 2. Get Gemini API Key
+### 2. Install and Start Ollama
 
-1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Click "Create API key"
-3. Copy the key
+1. Install Ollama from <https://ollama.com/download>
+2. Start Ollama: `ollama serve`
+3. Pull the default model: `ollama pull qwen2.5-coder:7b`
 
 ### 3. Configure Environment
 
@@ -82,8 +82,8 @@ pip install -r requirements.txt
 # Copy template
 cp .env.example .env
 
-# Edit .env and add your API key
-GEMINI_API_KEY=your_key_here
+# Optional: tune Ollama settings
+OLLAMA_MODEL=qwen2.5-coder:7b
 ```
 
 ### 4. Run Tests
@@ -236,10 +236,11 @@ Filter or modify existing dashboard results.
 
 ## 🔧 Troubleshooting
 
-### "GEMINI_API_KEY not set"
+### "Ollama runtime not reachable"
 
-- Make sure `.env` file exists and contains your API key
-- Run: `cp .env.example .env` and edit the file
+- Start Ollama: `ollama serve`
+- Verify endpoint is reachable at `http://localhost:11434/api/tags`
+- Pull a model if none are installed: `ollama pull qwen2.5-coder:7b`
 
 ### "CSV file not found"
 
@@ -253,14 +254,14 @@ Filter or modify existing dashboard results.
 
 ### LLM returns invalid JSON
 
-- Check internet connection to Google API
-- Verify API key is valid
-- Check API quota/billing
+- Use a stronger coding model (for example `qwen2.5-coder:7b`)
+- Increase timeout in `.env` with `OLLAMA_REQUEST_TIMEOUT`
+- Retry the prompt with a more specific business question
 
 ## 📚 Framework Stack
 
 - **Framework:** FastAPI (async, high performance)
-- **LLM:** Google Gemini API (free tier available)
+- **LLM:** Ollama local models
 - **Data:** Pandas (data manipulation)
 - **API Server:** Uvicorn (ASGI)
 - **Validation:** Pydantic (typed requests/responses)

@@ -8,24 +8,36 @@ from typing import Dict, Any, List
 warnings.filterwarnings('ignore', category=FutureWarning)
 
 from data_loader import DataSchemaProvider
+from config import (
+    OLLAMA_GENERATE_ENDPOINT,
+    OLLAMA_TAGS_ENDPOINT,
+    OLLAMA_MODEL,
+    OLLAMA_FALLBACK_MODELS,
+    OLLAMA_REQUEST_TIMEOUT,
+    OLLAMA_TEMPERATURE,
+    OLLAMA_TOP_P,
+    OLLAMA_NUM_PREDICT,
+    OLLAMA_NUM_CTX,
+    OLLAMA_BASE_URL,
+)
 
 class LLMEngine:
     """Wrapper for Ollama local LLM API (no quotas, free!)"""
     
     def __init__(self):
-        # Ollama runs on localhost:11434 by default
-        self.api_url = "http://localhost:11434/api/generate"
-        self.model = "qwen2.5-coder:7b"
-        self.fallback_models = ["qwen2.5-coder:3b", "mistral", "phi3:mini"]
+        self.api_url = OLLAMA_GENERATE_ENDPOINT
+        self.tags_url = OLLAMA_TAGS_ENDPOINT
+        self.model = OLLAMA_MODEL
+        self.fallback_models = OLLAMA_FALLBACK_MODELS
         self.schema_provider = DataSchemaProvider()
-        self.request_timeout = 120
+        self.request_timeout = OLLAMA_REQUEST_TIMEOUT
         self.allowed_chart_types = {"bar", "line", "pie", "scatter", "table", "area"}
         
         # Test connection
         try:
-            response = requests.get("http://localhost:11434/api/tags", timeout=2)
+            response = requests.get(self.tags_url, timeout=2)
             if response.status_code == 200:
-                print("✓ Ollama connected on localhost:11434")
+                print(f"✓ Ollama connected at {OLLAMA_BASE_URL}")
                 available = self._get_available_models()
                 if self.model not in available:
                     print(f"⚠ Preferred model '{self.model}' not found locally.")
@@ -35,14 +47,14 @@ class LLMEngine:
             else:
                 print("⚠ Warning: Could not connect to Ollama. Make sure Ollama is running!")
         except requests.exceptions.ConnectionError:
-            print("⚠ Warning: Ollama not running on localhost:11434")
+            print(f"⚠ Warning: Ollama not running at {OLLAMA_BASE_URL}")
             print("  Start Ollama from the system tray or run: ollama serve")
             print("  Then run: ollama pull qwen2.5-coder:7b")
 
     def _get_available_models(self) -> List[str]:
         """Return model names available in local Ollama runtime."""
         try:
-            response = requests.get("http://localhost:11434/api/tags", timeout=3)
+            response = requests.get(self.tags_url, timeout=3)
             if response.status_code != 200:
                 return []
             data = response.json()
@@ -224,10 +236,10 @@ Please provide your response in the JSON format specified above.
                             "stream": False,
                             "keep_alive": "10m",
                             "options": {
-                                "temperature": 0.15,
-                                "top_p": 0.9,
-                                "num_predict": 280,
-                                "num_ctx": 2048
+                                "temperature": OLLAMA_TEMPERATURE,
+                                "top_p": OLLAMA_TOP_P,
+                                "num_predict": OLLAMA_NUM_PREDICT,
+                                "num_ctx": OLLAMA_NUM_CTX
                             }
                         },
                         timeout=self.request_timeout

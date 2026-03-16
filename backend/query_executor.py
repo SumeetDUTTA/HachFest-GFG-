@@ -12,6 +12,11 @@ class QueryExecutor:
         self.schema_provider = DataSchemaProvider()
         self.df = self.schema_provider.get_dataframe()
         self._result_cache: Dict[str, Dict[str, Any]] = {}
+
+    def refresh_data(self) -> None:
+        """Reload in-memory dataframe from shared schema provider after dataset updates."""
+        self.df = self.schema_provider.get_dataframe()
+        self._result_cache.clear()
     
     def validate_pandas_code(self, code: str) -> Tuple[bool, str]:
         """
@@ -57,6 +62,9 @@ class QueryExecutor:
         Returns:
             Dict with success status, data, and metadata
         """
+        # Always execute against the latest uploaded/default dataset snapshot.
+        self.df = self.schema_provider.get_dataframe()
+
         # Validate code
         is_valid, error_msg = self.validate_pandas_code(pandas_code)
         if not is_valid:

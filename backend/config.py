@@ -3,9 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Google Gemini API configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")  # Alternative env var name
+# Ollama configuration
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
+OLLAMA_GENERATE_ENDPOINT = f"{OLLAMA_BASE_URL}/api/generate"
+OLLAMA_TAGS_ENDPOINT = f"{OLLAMA_BASE_URL}/api/tags"
 
 # Data configuration
 DATA_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "Customer Behaviour (Online vs Offline).xlsx")
@@ -31,6 +32,14 @@ API_KEYS = {
 ENABLE_REQUEST_LOGGING = os.getenv("ENABLE_REQUEST_LOGGING", "true").lower() == "true"
 
 # LLM configuration
-GEMINI_MODEL = "gemini-2.0-flash"  # Updated model name for google.genai v1.67.0
-GEMINI_TEMPERATURE = 0.7
-GEMINI_MAX_OUTPUT_TOKENS = 500
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+OLLAMA_FALLBACK_MODELS = [
+	model.strip()
+	for model in os.getenv("OLLAMA_FALLBACK_MODELS", "qwen2.5-coder:3b,mistral,phi3:mini").split(",")
+	if model.strip()
+]
+OLLAMA_REQUEST_TIMEOUT = int(os.getenv("OLLAMA_REQUEST_TIMEOUT", "120"))
+OLLAMA_TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0.15"))
+OLLAMA_TOP_P = float(os.getenv("OLLAMA_TOP_P", "0.9"))
+OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "280"))
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "2048"))

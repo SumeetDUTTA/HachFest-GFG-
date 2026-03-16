@@ -121,24 +121,26 @@ def test_chart_selector():
         return False
 
 def test_llm_engine():
-    """Test 4: LLM Engine (requires API key)."""
+    """Test 4: LLM Engine (requires local Ollama runtime)."""
     print("="*60)
     print("TEST 4: LLM Engine Integration")
     print("="*60)
     
     try:
-        from dotenv import load_dotenv
-        from config import GEMINI_API_KEY
-        
-        load_dotenv()
-        
-        if not GEMINI_API_KEY:
-            print("⚠ GEMINI_API_KEY not set in .env file")
+        import requests
+        from config import OLLAMA_TAGS_ENDPOINT, OLLAMA_MODEL
+
+        try:
+            response = requests.get(OLLAMA_TAGS_ENDPOINT, timeout=3)
+        except requests.exceptions.RequestException:
+            response = None
+
+        if response is None or response.status_code != 200:
+            print("⚠ Ollama runtime is not reachable")
             print("  To test LLM engine:")
-            print("  1. Copy .env.example to .env")
-            print("  2. Get API key from https://aistudio.google.com/app/apikey")
-            print("  3. Add key to .env file")
-            print("\n✓ TEST 4 SKIPPED (API key not configured)\n")
+            print("  1. Start Ollama: ollama serve")
+            print(f"  2. Pull model: ollama pull {OLLAMA_MODEL}")
+            print("\n✓ TEST 4 SKIPPED (Ollama not running)\n")
             return True
         
         from llm_engine import LLMEngine
@@ -234,7 +236,7 @@ def main():
     if passed == total:
         print("\n✓ All tests passed! AI Brain is ready to use.")
         print("\nNext steps:")
-        print("1. Configure .env file with GEMINI_API_KEY")
+        print("1. Start Ollama and ensure model is available")
         print("2. Run: python -m uvicorn main:app --reload")
         print("3. Visit: http://localhost:8000/docs")
     else:

@@ -1,6 +1,7 @@
 import pandas as pd # type: ignore
 from typing import Dict, Any, Optional
 import json
+import io
 from config import DATA_FILE_PATH
 
 class DataSchemaProvider:
@@ -81,6 +82,33 @@ class DataSchemaProvider:
             print(f"✓ Loaded {len(self._df)} rows, {len(self._df.columns)} columns")
         except Exception as e:
             raise RuntimeError(f"Failed to load data: {e}")
+
+    def load_uploaded_csv(self, csv_bytes: bytes) -> None:
+        """Load CSV bytes uploaded by frontend and rebuild schema."""
+        if not csv_bytes:
+            raise ValueError("Uploaded CSV file is empty")
+
+        last_error: Optional[Exception] = None
+        encodings = ["utf-8", "utf-8-sig", "latin-1", "iso-8859-1", "cp1252"]
+
+        for encoding in encodings:
+            try:
+                decoded = csv_bytes.decode(encoding)
+                df = pd.read_csv(io.StringIO(decoded), on_bad_lines="skip")
+
+                if df.empty:
+                    raise ValueError("CSV contains no data rows")
+                if len(df.columns) < 2:
+                    raise ValueError("CSV must contain at least 2 columns")
+
+                self._df = df
+                self._build_schema()
+                print(f"✓ Loaded uploaded CSV: {len(self._df)} rows, {len(self._df.columns)} columns")
+                return
+            except Exception as exc:
+                last_error = exc
+
+        raise RuntimeError(f"Failed to parse uploaded CSV: {last_error}")
     
     def _build_schema(self):
         """Build comprehensive schema metadata."""

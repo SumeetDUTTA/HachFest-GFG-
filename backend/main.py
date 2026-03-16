@@ -3,7 +3,7 @@ from time import time
 from time import perf_counter
 import logging
 import uuid
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -142,6 +142,15 @@ class SchemaResponse(BaseModel):
     columns: list
     row_count: int
     description: str
+
+
+class UploadCSVResponse(BaseModel):
+    success: bool
+    filename: Optional[str] = None
+    row_count: Optional[int] = None
+    columns: Optional[list] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
 
 
 def _sanitize_error(error_message: str) -> str:
@@ -330,6 +339,49 @@ async def get_schema() -> SchemaResponse:
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/upload-csv")
+async def upload_csv(file: UploadFile = File(...)) -> UploadCSVResponse:
+    """Upload a CSV file from frontend and make it the active dataset."""
+    global query_executor
+
+    try:
+        filename = (file.filename or "").strip()
+        if not filename.lower().endswith(".csv"):
+            raise HTTPException(status_code=400, detail="Only .csv files are supported")
+
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+        schema_provider.load_uploaded_csv(file_bytes)
+
+        if query_executor is None:
+            query_executor = QueryExecutor()
+        else:
+            query_executor.refresh_data()
+
+        # Reset state tied to previous dataset to avoid stale results.
+        prompt_cache.clear()
+        conversation_state.clear()
+
+        schema = schema_provider.get_schema_json()
+        return UploadCSVResponse(
+            success=True,
+            filename=filename,
+            row_count=schema.get("row_count"),
+            columns=schema.get("column_names"),
+            message="CSV uploaded successfully and dataset refreshed",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        return UploadCSVResponse(
+            success=False,
+            filename=file.filename,
+            error=_sanitize_error(str(e)),
+        )
 
 @app.post("/generate-dashboard")
 async def generate_dashboard(request: DashboardRequest, http_request: Request) -> DashboardResponse:

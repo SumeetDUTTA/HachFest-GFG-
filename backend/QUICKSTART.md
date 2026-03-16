@@ -7,26 +7,26 @@ Your conversational AI brain is fully implemented and tested. All 5 tests are pa
 - ✓ Data Loader: Loads 11,789 customer records with 25 columns
 - ✓ Query Executor: Validates and executes pandas queries safely
 - ✓ Chart Selector: Recommends chart types and configs
-- ✓ LLM Engine: Google Gemini API integration (ready for API key)
+- ✓ LLM Engine: Ollama local LLM integration
 - ✓ End-to-End: Full pipeline from prompt to dashboard working
 
 ---
 
 ## 🚀 Deploy & Test (3 Steps)
 
-### Step 1: Get API Key (2 minutes)
+### Step 1: Install Ollama (2 minutes)
 
-1. Go to: <https://aistudio.google.com/app/apikey>
-2. Click "Create API key in new project"
-3. Copy the key (it's free!)
+1. Install from: <https://ollama.com/download>
+2. Start runtime: `ollama serve`
+3. Pull a model: `ollama pull qwen2.5-coder:7b`
 
 ### Step 2: Configure Environment
 
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and paste your API key:
-# GEMINI_API_KEY=paste_your_key_here
+# Optional: tweak model/settings if needed
+# OLLAMA_MODEL=qwen2.5-coder:7b
 ```
 
 ### Step 3: Start the Server
@@ -92,7 +92,7 @@ Copy these into the /generate-dashboard endpoint:
 ```
 backend/
 ├── main.py                 # FastAPI application & endpoints
-├── llm_engine.py          # Google Gemini API wrapper
+├── llm_engine.py          # Ollama local LLM wrapper
 ├── query_executor.py      # Pandas query validator & executor
 ├── chart_selector.py      # Chart type recommendations
 ├── data_loader.py         # CSV/Excel loading with encoding fixes
@@ -111,7 +111,7 @@ backend/
 ```
 User Prompt
     ↓
-LLM Engine (Gemini)
+LLM Engine (Ollama)
     ↓ (generates pandas code + chart type)
 Query Executor
     ↓ (validates & executes safely)
@@ -170,12 +170,11 @@ netstat -ano | findstr :8000
 uvicorn main:app --port 8001
 ```
 
-### Q: "GEMINI_API_KEY not set"
+### Q: "Ollama runtime not reachable"
 
 ```bash
-# Verify .env file exists and has the key:
-cat .env
-# Should show: GEMINI_API_KEY=your_key_here
+# Verify Ollama is running and reachable:
+curl http://localhost:11434/api/tags
 ```
 
 ### Q: "CSV not found"
@@ -199,7 +198,7 @@ cat .env
 
 | Module | Purpose | Status |
 |--------|---------|--------|
-| `llm_engine.py` | Calls Google Gemini, gets pandas code + chart type | ✅ Ready |
+| `llm_engine.py` | Calls Ollama, gets pandas code + chart type | ✅ Ready |
 | `query_executor.py` | Validates code, runs queries, prevents hallucinations | ✅ Ready |
 | `chart_selector.py` | Converts data to chart configs (Recharts/Plotly compatible) | ✅ Ready |
 | `data_loader.py` | Loads 11,789 customer records, provides schema metadata | ✅ Ready |
