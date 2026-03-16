@@ -1,23 +1,43 @@
 import React, { useState } from 'react';
 import { Upload, X, FileText, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { dashboardApi } from '../services/api';
+import { AlertCircle } from 'lucide-react';
 
 const FileUploader = () => {
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [uploadResult, setUploadResult] = useState(null);
+  const [error, setError] = useState(null);
+
   const handleDrop = (e) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) simulateUpload(droppedFile);
+    if (droppedFile) performUpload(droppedFile);
   };
 
-  const simulateUpload = (f) => {
+  const performUpload = async (f) => {
+    if (!f.name.toLowerCase().endswith('.csv')) {
+      setError("Only CSV files are supported currently.");
+      return;
+    }
+    
     setIsUploading(true);
-    setTimeout(() => {
-      setFile(f);
+    setError(null);
+    try {
+      const result = await dashboardApi.uploadCsv(f);
+      if (result.success) {
+        setFile(f);
+        setUploadResult(result);
+      } else {
+        setError(result.error || "Upload failed");
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || "Connection to backend failed");
+    } finally {
       setIsUploading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -39,9 +59,15 @@ const FileUploader = () => {
                ) : <Upload size={20} />}
             </div>
             <p className="text-[14px] font-semibold text-[#111827]">
-              {isUploading ? 'Uploading records...' : 'Click or drag dataset to upload'}
+              {isUploading ? 'Refreshing Dataset...' : 'Click or drag CSV to upload'}
             </p>
-            <p className="text-[12px] text-[#6B7280] mt-1">CSV, XLSX or JSON up to 50MB</p>
+            <p className="text-[12px] text-[#6B7280] mt-1">Enterprise CSV up to 50MB</p>
+            {error && (
+              <div className="mt-4 flex items-center gap-2 text-red-500 bg-red-50 px-3 py-2 rounded-lg border border-red-100">
+                <AlertCircle size={14} />
+                <span className="text-[11px] font-medium">{error}</span>
+              </div>
+            )}
           </motion.div>
         ) : (
           <motion.div 
@@ -75,7 +101,7 @@ const FileUploader = () => {
                 </div>
                 <div className="p-4 bg-white border border-[#E5E7EB] rounded-lg">
                    <p className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Row Count</p>
-                   <span className="text-lg font-bold text-[#111827]">~24,500</span>
+                   <span className="text-lg font-bold text-[#111827]">{uploadResult?.row_count?.toLocaleString() || '---'}</span>
                 </div>
              </div>
              

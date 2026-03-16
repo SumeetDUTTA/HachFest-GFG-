@@ -1,22 +1,42 @@
 import React, { useState } from 'react';
 import { SendHorizontal, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { dashboardApi } from '../services/api';
 
 const ChatPanel = ({ isDrawer }) => {
   const [messages, setMessages] = useState([
-    { role: 'user', content: 'Filter to East region only', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
-    { role: 'system', content: 'Filtered the dashboard for the East region metrics.', type: 'text' }
+    { role: 'system', content: 'I am your BI assistant. How can I help you refine this analysis?', type: 'text' }
   ]);
   const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    setMessages(prev => [...prev, { role: 'user', content: input, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' }]);
+    if (!input.trim() || isTyping) return;
+    
+    const userMessage = { role: 'user', content: input, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'system', content: `Analyzing "${input}"... Applying intelligence filters.`, type: 'text' }]);
-    }, 1000);
+    setIsTyping(true);
+
+    try {
+      const result = await dashboardApi.refine(input);
+      if (result.success) {
+        setMessages(prev => [...prev, { 
+          role: 'system', 
+          content: result.insights || 'Analysis updated successfully.', 
+          type: 'text' 
+        }]);
+        // Note: In a real app, we would use a Global State or Context to update the dashboard grid
+        // For now, we'll assume the user sees the insights here
+      } else {
+        setMessages(prev => [...prev, { role: 'system', content: `Error: ${result.error}`, type: 'text' }]);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'system', content: 'Connection error. Please try again.', type: 'text' }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

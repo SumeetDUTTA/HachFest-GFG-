@@ -4,21 +4,32 @@ import DashboardGrid from '../components/DashboardGrid';
 import ChatPanel from '../components/ChatPanel';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, X, AlertCircle } from 'lucide-react';
+import { dashboardApi } from '../services/api';
 
 const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [error, setError] = useState(null);
   const [isGenerated, setIsGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const handleGenerate = (prompt) => {
-    setIsGenerated(false);
+  const handleGenerate = async (prompt) => {
     setIsLoading(true);
-    
-    setTimeout(() => {
+    setError(null);
+    try {
+      const result = await dashboardApi.generate(prompt);
+      if (result.success) {
+        setDashboardData(result);
+        setIsGenerated(true);
+      } else {
+        setError(result.error || "Failed to generate dashboard");
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || "Connection to backend failed");
+    } finally {
       setIsLoading(false);
-      setIsGenerated(true);
-    }, 1200);
+    }
   };
 
   return (
@@ -29,13 +40,34 @@ const Dashboard = () => {
         <AnimatePresence mode="wait">
           {isLoading ? (
             <LoadingSkeleton key="skeleton" />
-          ) : isGenerated ? (
+          ) : error ? (
+            <motion.div 
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-6 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-4"
+            >
+              <div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h3 className="text-[14px] font-bold text-red-900">Analysis Failed</h3>
+                <p className="text-[13px] text-red-700 mt-1">{error}</p>
+                <button 
+                  onClick={() => setError(null)}
+                  className="mt-3 text-[12px] font-bold text-red-600 hover:text-red-800 uppercase tracking-wider"
+                >
+                  Clear Error
+                </button>
+              </div>
+            </motion.div>
+          ) : isGenerated && dashboardData ? (
             <motion.div
               key="grid"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <DashboardGrid isVisible={true} />
+              <DashboardGrid isVisible={true} data={dashboardData} />
             </motion.div>
           ) : (
             <div key="placeholder" className="h-[400px] flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] rounded-2xl bg-white/50">
