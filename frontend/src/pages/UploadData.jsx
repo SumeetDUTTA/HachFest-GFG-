@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import FileUploader from '../components/FileUploader';
 import { Database, ShieldCheck, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const ACTIVE_DATASET_STORAGE_KEY = 'insightbi_active_dataset';
+
 const UploadData = () => {
+  const [datasetInfo, setDatasetInfo] = useState(null);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(ACTIVE_DATASET_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.filename) {
+        setDatasetInfo(parsed);
+      }
+    } catch (_error) {
+      window.localStorage.removeItem(ACTIVE_DATASET_STORAGE_KEY);
+    }
+  }, []);
+
+  const handleUploadSuccess = (payload) => {
+    setDatasetInfo(payload);
+    window.localStorage.setItem(ACTIVE_DATASET_STORAGE_KEY, JSON.stringify(payload));
+  };
+
+  const handleClearDataset = () => {
+    setDatasetInfo(null);
+    window.localStorage.removeItem(ACTIVE_DATASET_STORAGE_KEY);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -13,7 +40,20 @@ const UploadData = () => {
         </div>
       </div>
 
-      <FileUploader />
+      <FileUploader
+        initialDataset={datasetInfo}
+        onUploadSuccess={handleUploadSuccess}
+        onClearDataset={handleClearDataset}
+      />
+
+      {datasetInfo && (
+        <div className="card-base p-5 bg-emerald-50/40 border-emerald-200">
+          <h3 className="text-[14px] font-semibold text-emerald-800">Active Dataset Ready</h3>
+          <p className="text-[12px] text-emerald-700 mt-1">
+            {datasetInfo.filename} loaded with {datasetInfo.row_count} rows and {datasetInfo.columns?.length || 0} columns.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card-base p-6 flex flex-col items-center text-center">

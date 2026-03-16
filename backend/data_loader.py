@@ -90,23 +90,100 @@ class DataSchemaProvider:
 
         last_error: Optional[Exception] = None
         encodings = ["utf-8", "utf-8-sig", "latin-1", "iso-8859-1", "cp1252"]
+        candidate_separators = [None, ",", ";", "\t", "|"]
+        best_df: Optional[pd.DataFrame] = None
+        best_score = (-1, -1)
 
         for encoding in encodings:
             try:
                 decoded = csv_bytes.decode(encoding)
-                df = pd.read_csv(io.StringIO(decoded), on_bad_lines="skip")
+                decoded_buffer = io.StringIO(decoded)
 
-                if df.empty:
-                    raise ValueError("CSV contains no data rows")
-                if len(df.columns) < 2:
-                    raise ValueError("CSV must contain at least 2 columns")
+                for sep in candidate_separators:
+                    decoded_buffer.seek(0)
+                    try:
+                        read_kwargs = {
+                            "on_bad_lines": "skip",
+                            "skip_blank_lines": True,
+                        }
+                        if sep is None:
+                            # Let pandas sniff delimiter for unknown CSV formats.
+                            read_kwargs.update({"sep": None, "engine": "python"})
+                        else:
+                            read_kwargs.update({"sep": sep})
 
-                self._df = df
-                self._build_schema()
-                print(f"✓ Loaded uploaded CSV: {len(self._df)} rows, {len(self._df.columns)} columns")
-                return
+                        df = pd.read_csv(decoded_buffer, **read_kwargs)
+
+                        if df.empty:
+                            continue
+                        column_count = len(df.columns)
+                        if column_count < 2:
+                            continue
+
+                        # Pick the richest parse result across delimiter/encoding attempts.
+                        score = (column_count, len(df))
+                        if score > best_score:
+                            best_df = df
+                            best_score = score
+                    except Exception as parse_exc:
+                        last_error = parse_exc
+
+                # Fallback for noisy files: extract the longest contiguous CSV-like block.
+                lines = [line for line in decoded.splitlines() if line.strip()]
+                for sep in [",", ";", "\t", "|"]:
+                    if len(lines) < 2:
+                        continue
+
+                    counts = [line.count(sep) for line in lines]
+                    max_count = max(counts) if counts else 0
+                    if max_count < 1:
+                        continue
+
+                    threshold = max(1, int(max_count * 0.8))
+                    best_start = -1
+                    best_end = -1
+                    start = None
+
+                    for idx, count in enumerate(counts):
+                        if count >= threshold:
+                            if start is None:
+                                start = idx
+                        elif start is not None:
+                            if (idx - start) > (best_end - best_start):
+                                best_start, best_end = start, idx
+                            start = None
+
+                    if start is not None and (len(lines) - start) > (best_end - best_start):
+                        best_start, best_end = start, len(lines)
+
+                    if best_start == -1 or (best_end - best_start) < 2:
+                        continue
+
+                    candidate_text = "\n".join(lines[best_start:best_end])
+                    try:
+                        extracted_df = pd.read_csv(
+                            io.StringIO(candidate_text),
+                            sep=sep,
+                            on_bad_lines="skip",
+                            skip_blank_lines=True,
+                        )
+                        if extracted_df.empty or len(extracted_df.columns) < 2:
+                            continue
+
+                        score = (len(extracted_df.columns), len(extracted_df))
+                        if score > best_score:
+                            best_df = extracted_df
+                            best_score = score
+                    except Exception as parse_exc:
+                        last_error = parse_exc
             except Exception as exc:
                 last_error = exc
+
+        if best_df is not None:
+            self._df = best_df
+            self._build_schema()
+            print(f"✓ Loaded uploaded CSV: {len(self._df)} rows, {len(self._df.columns)} columns")
+            return
 
         raise RuntimeError(f"Failed to parse uploaded CSV: {last_error}")
     

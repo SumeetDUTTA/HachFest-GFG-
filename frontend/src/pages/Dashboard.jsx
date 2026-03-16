@@ -1,30 +1,125 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import PromptInput from '../components/PromptInput';
 import DashboardGrid from '../components/DashboardGrid';
 import ChatPanel from '../components/ChatPanel';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, Upload, X } from 'lucide-react';
+import { generateDashboard, refineDashboard } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [isGenerated, setIsGenerated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [dashboardResponse, setDashboardResponse] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: 'system',
+      content: 'Ask a question to generate your first dashboard. Then use follow-up prompts here to refine it.',
+      type: 'text',
+    },
+  ]);
 
-  const handleGenerate = (prompt) => {
-    setIsGenerated(false);
+  const headerTitle = useMemo(() => {
+    if (!dashboardResponse?.title) {
+      return 'Generated Dashboard';
+    }
+    return dashboardResponse.title;
+  }, [dashboardResponse]);
+
+  const handleGenerate = async (prompt) => {
+    setErrorMessage('');
     setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
+    setIsGenerated(false);
+
+    try {
+      const response = await generateDashboard(prompt);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Dashboard generation failed');
+      }
+
+      setDashboardResponse(response);
       setIsGenerated(true);
-    }, 1200);
+      setChatMessages([
+        {
+          role: 'system',
+          content: `Dashboard ready. ${response.insights || 'You can now ask a follow-up to refine this analysis.'}`,
+          type: 'text',
+        },
+      ]);
+    } catch (error) {
+      setErrorMessage(error.message || 'Unable to generate dashboard right now.');
+      setDashboardResponse(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleRefine = async (prompt) => {
+    if (!prompt?.trim()) return;
+
+    setChatMessages((prev) => [...prev, { role: 'user', content: prompt.trim() }]);
+
+    try {
+      const response = await refineDashboard(prompt.trim());
+
+      if (!response.success) {
+        throw new Error(response.error || 'Refinement failed');
+      }
+
+      setDashboardResponse(response);
+      setIsGenerated(true);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'system',
+          content: response.insights || 'Updated dashboard generated from your follow-up.',
+          type: 'text',
+        },
+      ]);
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'system',
+          content: error.message || 'Could not apply this refinement. Try rephrasing the request.',
+          type: 'text',
+        },
+      ]);
+    }
   };
 
   return (
     <div className="relative pb-20">
       <div className="space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-[24px] font-bold text-[#111827] tracking-tight">Dashboard</h1>
+            <p className="text-[#6B7280] text-[13px]">Generate charts from prompts or upload a new dataset.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/upload')}
+            className="btn-secondary h-10 px-4 inline-flex items-center gap-2 whitespace-nowrap"
+          >
+            <Upload size={15} />
+            Upload CSV
+          </button>
+        </div>
+
         <PromptInput onGenerate={handleGenerate} isLoading={isLoading} />
+
+        {errorMessage && (
+          <div className="card-base p-4 border-rose-200 bg-rose-50/60 text-rose-700 text-[13px] font-medium">
+            {errorMessage}
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {isLoading ? (
@@ -35,7 +130,7 @@ const Dashboard = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <DashboardGrid isVisible={true} />
+              <DashboardGrid isVisible={true} response={dashboardResponse} title={headerTitle} />
             </motion.div>
           ) : (
             <div key="placeholder" className="h-[400px] flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] rounded-2xl bg-white/50">
@@ -83,7 +178,7 @@ const Dashboard = () => {
                  <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-slate-200 rounded-md text-slate-400"><X size={18} /></button>
               </div>
               <div className="flex-1 overflow-hidden">
-                 <ChatPanel isDrawer={true} />
+                  <ChatPanel isDrawer={true} messages={chatMessages} onSend={handleRefine} />
               </div>
             </motion.div>
           </>

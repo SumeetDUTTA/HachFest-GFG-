@@ -14,6 +14,8 @@ from config import (
     OLLAMA_MODEL,
     OLLAMA_FALLBACK_MODELS,
     OLLAMA_REQUEST_TIMEOUT,
+    OLLAMA_FALLBACK_REQUEST_TIMEOUT,
+    OLLAMA_MAX_MODEL_ATTEMPTS,
     OLLAMA_TEMPERATURE,
     OLLAMA_TOP_P,
     OLLAMA_NUM_PREDICT,
@@ -215,6 +217,8 @@ Please provide your response in the JSON format specified above.
             
             # Try preferred model first, then lighter installed fallbacks.
             candidate_models = self._resolve_candidate_models()
+            if OLLAMA_MAX_MODEL_ATTEMPTS > 0:
+                candidate_models = candidate_models[:OLLAMA_MAX_MODEL_ATTEMPTS]
             if not candidate_models:
                 return {
                     "error": True,
@@ -228,6 +232,10 @@ Please provide your response in the JSON format specified above.
 
             for model_name in candidate_models:
                 try:
+                    timeout_seconds = self.request_timeout if model_name == candidate_models[0] else min(
+                        self.request_timeout,
+                        OLLAMA_FALLBACK_REQUEST_TIMEOUT,
+                    )
                     response = requests.post(
                         self.api_url,
                         json={
@@ -242,13 +250,13 @@ Please provide your response in the JSON format specified above.
                                 "num_ctx": OLLAMA_NUM_CTX
                             }
                         },
-                        timeout=self.request_timeout
+                        timeout=timeout_seconds
                     )
                     if response.status_code == 200:
                         break
                     last_error = f"{model_name}: {response.status_code} - {response.text}"
                 except requests.exceptions.ReadTimeout:
-                    last_error = f"{model_name}: timed out after {self.request_timeout}s"
+                    last_error = f"{model_name}: timed out after {timeout_seconds}s"
                     continue
                 except requests.exceptions.RequestException as ex:
                     last_error = f"{model_name}: {str(ex)}"

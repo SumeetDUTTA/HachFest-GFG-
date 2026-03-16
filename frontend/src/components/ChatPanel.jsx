@@ -2,21 +2,23 @@ import React, { useState } from 'react';
 import { SendHorizontal, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ChatPanel = ({ isDrawer }) => {
-  const [messages, setMessages] = useState([
-    { role: 'user', content: 'Filter to East region only', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
-    { role: 'system', content: 'Filtered the dashboard for the East region metrics.', type: 'text' }
-  ]);
+const ChatPanel = ({ isDrawer, messages = [], onSend }) => {
   const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    setMessages(prev => [...prev, { role: 'user', content: input, avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' }]);
+    const userPrompt = input.trim();
+    if (!userPrompt || !onSend || isSending) return;
+
+    setIsSending(true);
     setInput('');
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'system', content: `Analyzing "${input}"... Applying intelligence filters.`, type: 'text' }]);
-    }, 1000);
+
+    try {
+      await onSend(userPrompt);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -58,13 +60,19 @@ const ChatPanel = ({ isDrawer }) => {
           placeholder="Type a follow-up..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          disabled={isSending}
           className="flex-1 h-9 bg-[#F9FAFB] border border-[#E5E7EB] rounded px-3 text-[13px] outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 transition-all"
         />
         <button 
           type="submit"
-          className="h-9 w-9 bg-[#3B82F6] text-white rounded flex items-center justify-center hover:bg-blue-600 transition-all shadow-sm"
+          disabled={isSending || !input.trim()}
+          className="h-9 w-9 bg-[#3B82F6] text-white rounded flex items-center justify-center hover:bg-blue-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <SendHorizontal size={14} />
+          {isSending ? (
+            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <SendHorizontal size={14} />
+          )}
         </button>
       </form>
     </div>

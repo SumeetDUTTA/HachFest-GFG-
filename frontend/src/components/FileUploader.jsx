@@ -1,29 +1,73 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Upload, X, FileText, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { uploadCsv } from '../services/api';
 
-const FileUploader = () => {
-  const [file, setFile] = useState(null);
+const FileUploader = ({ initialDataset = null, onUploadSuccess, onClearDataset }) => {
+  const [uploadedDataset, setUploadedDataset] = useState(initialDataset);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    setUploadedDataset(initialDataset);
+  }, [initialDataset]);
+
+  const runUpload = async (selectedFile) => {
+    if (!selectedFile) return;
+    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
+      setUploadError('Only CSV files are supported by the backend right now.');
+      return;
+    }
+
+    setUploadError('');
+    setIsUploading(true);
+
+    try {
+      const response = await uploadCsv(selectedFile);
+      if (!response.success) {
+        throw new Error(response.error || 'Upload failed');
+      }
+
+      const datasetPayload = {
+        filename: response.filename || selectedFile.name,
+        fileSize: selectedFile.size,
+        row_count: response.row_count,
+        columns: response.columns || [],
+        message: response.message || 'CSV uploaded successfully and dataset refreshed',
+      };
+
+      setUploadedDataset(datasetPayload);
+      if (onUploadSuccess) {
+        onUploadSuccess(datasetPayload);
+      }
+    } catch (error) {
+      setUploadError(error.message || 'Upload failed. Please try again.');
+      setUploadedDataset(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleDrop = (e) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) simulateUpload(droppedFile);
+    if (droppedFile) runUpload(droppedFile);
   };
 
-  const simulateUpload = (f) => {
-    setIsUploading(true);
-    setTimeout(() => {
-      setFile(f);
-      setIsUploading(false);
-    }, 1500);
+  const handleFileSelection = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      runUpload(selectedFile);
+    }
+
+    e.target.value = '';
   };
 
   return (
     <div className="card-base p-6 bg-white">
       <AnimatePresence mode="wait">
-        {!file ? (
+        {!uploadedDataset ? (
           <motion.div 
             key="dropzone"
             initial={{ opacity: 0 }}
@@ -31,8 +75,16 @@ const FileUploader = () => {
             exit={{ opacity: 0 }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
             className="border-2 border-dashed border-[#E5E7EB] rounded-lg p-10 flex flex-col items-center justify-center hover:border-blue-400 hover:bg-[#F9FAFB] transition-all cursor-pointer"
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileSelection}
+            />
             <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
                {isUploading ? (
                  <div className="w-5 h-5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
@@ -41,7 +93,8 @@ const FileUploader = () => {
             <p className="text-[14px] font-semibold text-[#111827]">
               {isUploading ? 'Uploading records...' : 'Click or drag dataset to upload'}
             </p>
-            <p className="text-[12px] text-[#6B7280] mt-1">CSV, XLSX or JSON up to 50MB</p>
+            <p className="text-[12px] text-[#6B7280] mt-1">CSV up to 50MB</p>
+            {uploadError && <p className="text-[12px] text-rose-600 mt-3">{uploadError}</p>}
           </motion.div>
         ) : (
           <motion.div 
@@ -56,11 +109,19 @@ const FileUploader = () => {
                       <FileText size={18} />
                    </div>
                    <div>
-                      <p className="text-[13px] font-semibold text-[#111827]">{file.name}</p>
-                      <p className="text-[11px] text-[#6B7280]">{(file.size / 1024).toFixed(1)} KB • Ready for synthesis</p>
+                     <p className="text-[13px] font-semibold text-[#111827]">{uploadedDataset.filename}</p>
+                     <p className="text-[11px] text-[#6B7280]">{((uploadedDataset.fileSize || 0) / 1024).toFixed(1)} KB • Ready for synthesis</p>
                    </div>
                 </div>
-                <button onClick={() => setFile(null)} className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-md transition-all">
+                 <button
+                  onClick={() => {
+                    setUploadedDataset(null);
+                    if (onClearDataset) {
+                     onClearDataset();
+                    }
+                  }}
+                  className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-md transition-all"
+                 >
                    <X size={16} />
                 </button>
              </div>
@@ -75,11 +136,26 @@ const FileUploader = () => {
                 </div>
                 <div className="p-4 bg-white border border-[#E5E7EB] rounded-lg">
                    <p className="text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mb-1">Row Count</p>
-                   <span className="text-lg font-bold text-[#111827]">~24,500</span>
+                   <span className="text-lg font-bold text-[#111827]">{uploadedDataset?.row_count || '-'}</span>
                 </div>
              </div>
+
+               <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <p className="text-[12px] font-semibold text-blue-900">{uploadedDataset?.message || 'Dataset uploaded successfully.'}</p>
+                <p className="text-[11px] text-blue-700 mt-1">Columns detected: {uploadedDataset?.columns?.length || 0}</p>
+               </div>
              
-             <button className="btn-primary w-full h-10">Process & Sync Dataset</button>
+               <button
+                onClick={() => {
+                  setUploadedDataset(null);
+                  if (onClearDataset) {
+                    onClearDataset();
+                  }
+                }}
+                className="btn-secondary w-full h-10"
+               >
+                Upload Another CSV
+               </button>
           </motion.div>
         )}
       </AnimatePresence>

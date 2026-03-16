@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { SendHorizontal, Sparkles, Wand2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Sparkles, Wand2 } from 'lucide-react';
 
 const PromptInput = ({ onGenerate, isLoading }) => {
   const [input, setInput] = useState('');
@@ -13,7 +12,7 @@ const PromptInput = ({ onGenerate, isLoading }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (input.trim()) onGenerate(input);
+    if (input.trim() && !isLoading) onGenerate(input.trim());
   };
 
   return (
@@ -50,7 +49,12 @@ const PromptInput = ({ onGenerate, isLoading }) => {
           {suggestions.map((s) => (
             <button 
               key={s} 
-              onClick={() => { setInput(s); onGenerate(s); }}
+              type="button"
+              disabled={isLoading}
+              onClick={() => {
+                setInput(s);
+                onGenerate(s);
+              }}
               className="px-3 py-1 bg-white border border-[#E5E7EB] rounded-full text-[12px] text-[#6B7280] font-medium hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm"
             >
               {s}

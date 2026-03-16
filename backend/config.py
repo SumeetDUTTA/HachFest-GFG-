@@ -19,7 +19,10 @@ RATE_LIMIT_REQUESTS_PER_MINUTE = 30
 ENABLE_DETAILED_ERRORS = os.getenv("ENABLE_DETAILED_ERRORS", "false").lower() == "true"
 ALLOWED_ORIGINS = [
 	origin.strip()
-	for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+	for origin in os.getenv(
+		"ALLOWED_ORIGINS",
+		"http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173",
+	).split(",")
 	if origin.strip()
 ]
 ENABLE_API_KEY_AUTH = os.getenv("ENABLE_API_KEY_AUTH", "false").lower() == "true"
@@ -39,7 +42,9 @@ OLLAMA_FALLBACK_MODELS = [
 	if model.strip()
 ]
 OLLAMA_REQUEST_TIMEOUT = int(os.getenv("OLLAMA_REQUEST_TIMEOUT", "120"))
+OLLAMA_FALLBACK_REQUEST_TIMEOUT = int(os.getenv("OLLAMA_FALLBACK_REQUEST_TIMEOUT", "45"))
+OLLAMA_MAX_MODEL_ATTEMPTS = int(os.getenv("OLLAMA_MAX_MODEL_ATTEMPTS", "2"))
 OLLAMA_TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0.15"))
 OLLAMA_TOP_P = float(os.getenv("OLLAMA_TOP_P", "0.9"))
-OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "280"))
+OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "200"))
 OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "2048"))

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 import json
 import hashlib
+import re
 
 from llm_engine import LLMEngine
 from query_executor import QueryExecutor
@@ -222,10 +223,29 @@ def _process_dashboard_request(request: DashboardRequest, session_key: str) -> D
     llm_result = llm_engine.generate_query_and_chart(request.prompt)
 
     if llm_result.get("error"):
-        return DashboardResponse(
-            success=False,
-            error=llm_result.get("message", "LLM processing failed")
-        )
+        llm_message = llm_result.get("message", "LLM processing failed")
+        timeout_detected = bool(re.search(r"timed out|timeout", llm_message, flags=re.IGNORECASE))
+        unavailable_detected = "No compatible Ollama model found locally" in llm_message
+
+        if timeout_detected:
+            raise HTTPException(
+                status_code=504,
+                detail=(
+                    "AI model timed out while generating your dashboard. "
+                    "Try a shorter prompt, or increase OLLAMA_REQUEST_TIMEOUT in backend/.env."
+                ),
+            )
+
+        if unavailable_detected:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "No compatible Ollama model is available locally. "
+                    "Run: ollama pull qwen2.5-coder:7b or ollama pull phi3:mini"
+                ),
+            )
+
+        raise HTTPException(status_code=502, detail=_sanitize_error(llm_message))
 
     # Step 2: Extract pandas code and execute query
     pandas_code = llm_result.get("pandas_code")
@@ -377,11 +397,14 @@ async def upload_csv(file: UploadFile = File(...)) -> UploadCSVResponse:
     except HTTPException:
         raise
     except Exception as e:
-        return UploadCSVResponse(
-            success=False,
-            filename=file.filename,
-            error=_sanitize_error(str(e)),
-        )
+        # Return an explicit client-facing upload error instead of a generic dashboard error.
+        detail = _sanitize_error(str(e))
+        if not ENABLE_DETAILED_ERRORS:
+            detail = (
+                "CSV upload failed. Ensure the file is a valid CSV with a header row, "
+                "at least 2 columns, and at least 1 data row."
+            )
+        raise HTTPException(status_code=400, detail=detail)
 
 @app.post("/generate-dashboard")
 async def generate_dashboard(request: DashboardRequest, http_request: Request) -> DashboardResponse:
@@ -460,4 +483,4 @@ async def general_exception_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Starting Conversational BI Dashboard API...")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
