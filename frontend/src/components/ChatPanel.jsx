@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { SendHorizontal, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { dashboardApi } from '../services/api';
 
 const ChatPanel = ({ isDrawer, messages = [], onSend }) => {
   const [input, setInput] = useState('');
