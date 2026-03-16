@@ -15,13 +15,28 @@ const Dashboard = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [dashboardResponse, setDashboardResponse] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'system',
       content: 'Ask a question to generate your first dashboard. Then use follow-up prompts here to refine it.',
-      type: 'text',
     },
   ]);
+
+  // Check if CSV is already loaded on mount
+  React.useEffect(() => {
+    const checkData = async () => {
+      try {
+        const schema = await import('../services/api').then(m => m.getSchema());
+        if (schema && schema.columns?.length > 0) {
+          setIsDataLoaded(true);
+        }
+      } catch (e) {
+        setIsDataLoaded(false);
+      }
+    };
+    checkData();
+  }, []);
 
   const headerTitle = useMemo(() => {
     if (!dashboardResponse?.title) {
@@ -39,7 +54,19 @@ const Dashboard = () => {
       const response = await generateDashboard(prompt);
 
       if (!response.success) {
-        throw new Error(response.error || 'Dashboard generation failed');
+        // If it's a semantic ambiguity question, show it in the chat and open it
+        setChatMessages((prev) => [
+          ...prev,
+          { role: 'user', content: prompt },
+          { 
+            role: 'system', 
+            content: response.error || 'The model requires more information to proceed.',
+            avatar: null 
+          }
+        ]);
+        setIsChatOpen(true);
+        setIsLoading(false);
+        return;
       }
 
       setDashboardResponse(response);
@@ -48,7 +75,6 @@ const Dashboard = () => {
         {
           role: 'system',
           content: `Dashboard ready. ${response.insights || 'You can now ask a follow-up to refine this analysis.'}`,
-          type: 'text',
         },
       ]);
     } catch (error) {
@@ -113,7 +139,11 @@ const Dashboard = () => {
           </button>
         </div>
 
-        <PromptInput onGenerate={handleGenerate} isLoading={isLoading} />
+        <PromptInput 
+          onGenerate={handleGenerate} 
+          isLoading={isLoading} 
+          isDataLoaded={isDataLoaded} 
+        />
 
         {errorMessage && (
           <div className="card-base p-4 border-rose-200 bg-rose-50/60 text-rose-700 text-[13px] font-medium">

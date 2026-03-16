@@ -61,8 +61,10 @@ class ChartSelector:
         if normalized not in self.CHART_TYPES:
             normalized = "table"
 
-        # Guardrail: trend-like x-axis (age/time/year/month/day) should default to line.
-        trend_hint = any(token in x_key.lower() for token in ["age", "time", "date", "year", "month", "day"])
+        # Guardrail: trend-like x-axis (age/time/year/month/day) where age/time is numeric
+        # only force line if it wasn't explicitly a bar request or if it's strictly time-based.
+        x_key_str = str(x_key).lower()
+        trend_hint = any(token in x_key_str for token in ["time", "date", "year", "month", "day"])
         if normalized == "bar" and x_numeric and y_numeric and trend_hint:
             return "line"
 
@@ -89,7 +91,8 @@ class ChartSelector:
 
         # Bar readability: for non-trend bars with many rows, keep top 25 by y.
         if chart_type == "bar" and len(df) > 25 and pd.api.types.is_numeric_dtype(df[y_key]):
-            trend_hint = any(token in x_key.lower() for token in ["age", "time", "date", "year", "month", "day"])
+            x_key_str = str(x_key).lower()
+            trend_hint = any(token in x_key_str for token in ["age", "time", "date", "year", "month", "day"])
             if not trend_hint:
                 df = df.sort_values(by=y_key, ascending=False).head(25)
                 notes.append("Reduced bar categories to top 25 for readability.")
@@ -125,7 +128,15 @@ class ChartSelector:
         """
         keys = list(data[0].keys()) if data else []
         x_key = x_axis or (keys[0] if len(keys) > 0 else "")
-        y_key = y_axis or (keys[1] if len(keys) > 1 else "")
+        
+        # Detect all numeric columns except the X-axis for multi-series support
+        if y_axis:
+            y_keys = [y_axis]
+        else:
+            y_keys = [k for k in keys if k != x_key]
+            # If no other columns, fallback to x_key (rare)
+            if not y_keys and x_key:
+                y_keys = [x_key]
 
         config = {
             "type": chart_type,
@@ -138,23 +149,23 @@ class ChartSelector:
         if chart_type == "bar":
             config.update({
                 "xAxisDataKey": x_key,
-                "yAxisDataKey": y_key,
-                "layout": "vertical",
-                "colors": ["#8884d8"],
+                "yAxisDataKeys": y_keys, # Multi-series support
+                "layout": "horizontal",
+                "colors": ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"],
             })
         
         elif chart_type == "line":
             config.update({
                 "xAxisDataKey": x_key,
-                "yAxisDataKey": y_key,
+                "yAxisDataKeys": y_keys,
                 "strokeWidth": 2,
                 "dot": True,
-                "colors": ["#8884d8"],
+                "colors": ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"],
             })
         
         elif chart_type == "pie":
             config.update({
-                "dataKey": y_key or "value",
+                "dataKey": y_keys[0] if y_keys else "value",
                 "nameKey": x_key or "name",
             })
         

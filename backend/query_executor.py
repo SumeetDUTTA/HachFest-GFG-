@@ -107,6 +107,9 @@ class QueryExecutor:
             else:
                 truncated = False
             
+            # Ensure all column names are strings (prevents issues with unstack results/numeric headers)
+            result.columns = [str(c) for c in result.columns]
+            
             # Convert to JSON-serializable format
             result_json = result.to_dict(orient='records')
             

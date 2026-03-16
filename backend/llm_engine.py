@@ -39,17 +39,17 @@ class LLMEngine:
         try:
             response = requests.get(self.tags_url, timeout=2)
             if response.status_code == 200:
-                print(f"✓ Ollama connected at {OLLAMA_BASE_URL}")
+                print(f"Ollama connected at {OLLAMA_BASE_URL}")
                 available = self._get_available_models()
                 if self.model not in available:
-                    print(f"⚠ Preferred model '{self.model}' not found locally.")
+                    print(f"Warning: Preferred model '{self.model}' not found locally.")
                     if available:
                         print(f"  Available models: {', '.join(available)}")
                     print(f"  Run: ollama pull {self.model}")
             else:
-                print("⚠ Warning: Could not connect to Ollama. Make sure Ollama is running!")
+                print("Warning: Could not connect to Ollama. Make sure Ollama is running!")
         except requests.exceptions.ConnectionError:
-            print(f"⚠ Warning: Ollama not running at {OLLAMA_BASE_URL}")
+            print(f"Warning: Ollama not running at {OLLAMA_BASE_URL}")
             print("  Start Ollama from the system tray or run: ollama serve")
             print("  Then run: ollama pull qwen2.5-coder:7b")
 
@@ -165,29 +165,31 @@ class LLMEngine:
 ## Important Rules:
 - ONLY reference columns that exist in the schema above
 - Generate pandas code that is valid and executable
-- Be explicit about column names and operations
-- If a question is ambiguous, ask for clarification rather than guessing
+- If the user asks for multiple metrics versus a category (e.g., "Age vs Spending vs Time"), group by the first column and calculate the mean for all numeric columns mentioned.
+- Example for multi-metric: `df.groupby('age')[['spending', 'time']].mean().reset_index()`
+- Prefer completed queries over asking for clarification if a reasonable default (like `mean()` or `count()`) can be applied.
 - Never invent or hallucinate data or columns
 
 ## Output Format:
 When responding to a user query, provide your response in this exact JSON format:
 {{
     "query_type": "pandas",
-    "pandas_code": "df.groupby('column_name')['numeric_col'].mean()",
+    "pandas_code": "df.groupby('column_name')[['metric_a', 'metric_b']].mean().reset_index()",
     "explanation": "Brief explanation of what the query does",
     "chart_type": "bar|line|pie|scatter|table",
     "chart_title": "Suggested chart title",
     "reasoning": "Why this chart type is appropriate"
 }}
 
-If you don't have enough information or the request is ambiguous, respond with:
+If a request is totally incomprehensible, respond with:
 {{
     "error": true,
-    "message": "Clear explanation of what's missing or ambiguous"
+    "message": "Clear explanation of why the input cannot be processed"
 }}
 
 Important:
 - Return ONLY raw JSON.
+- For multi-series charts, your pandas_code SHOULD result in a dataframe where multiple columns represent metrics.
 - Do not include markdown code fences.
 - Do not include comments in JSON.
 """
@@ -253,6 +255,8 @@ Please provide your response in the JSON format specified above.
                         timeout=timeout_seconds
                     )
                     if response.status_code == 200:
+                        raw_response = response.json().get('response', '')
+                        print(f"LLM Raw Response ({model_name}): {raw_response[:200]}...")
                         break
                     last_error = f"{model_name}: {response.status_code} - {response.text}"
                 except requests.exceptions.ReadTimeout:

@@ -32,54 +32,57 @@ class DataSchemaProvider:
                 with open(csv_path, 'rb') as f:
                     raw_content = f.read()
                 
-                # Decode with error handling
-                content_str = raw_content.decode('latin-1', errors='ignore')
-                
-                # Extract CSV data using regex - look for the age...shopping_preference pattern
-                csv_match = re.search(
-                    r'(age,.*?shopping_preference[^\n]*\n(?:.*?\n)*)',
-                    content_str,
-                    re.DOTALL | re.IGNORECASE
-                )
-                
-                if csv_match:
-                    csv_data = csv_match.group(1)
-                    import io
-                    self._df = pd.read_csv(io.StringIO(csv_data), on_bad_lines='skip')
-                    
-            except:
+                content_str = raw_content.decode('utf-8', errors='ignore')
+                if "<html>" in content_str.lower():
+                    # Look for the header starting with age
+                    start_idx = content_str.lower().find("age,")
+                    if start_idx != -1:
+                        # Find the last closing tag before age
+                        content_str = content_str[start_idx:]
+                        # Also look for end of CSV if it has trailing HTML
+                        end_idx = content_str.lower().find("</pre>")
+                        if end_idx != -1:
+                            content_str = content_str[:end_idx]
+                        
+                        import io
+                        self._df = pd.read_csv(io.StringIO(content_str), on_bad_lines='skip')
+            except Exception as e:
+                print(f"Regex extraction failed: {e}")
                 pass
             
             # If regex extraction failed, try Excel
             if self._df is None or len(self._df.columns) < 5:
                 xlsx_path = DATA_FILE_PATH if DATA_FILE_PATH.endswith('.xlsx') else DATA_FILE_PATH.replace('.csv', '.xlsx')
                 try:
-                    # Try reading first sheet, then second sheet
                     self._df = pd.read_excel(xlsx_path, sheet_name=0)
-                    if len(self._df.columns) < 5:
-                        try:
-                            self._df = pd.read_excel(xlsx_path, sheet_name=1)
-                        except:
-                            pass
                 except:
                     pass
             
-            # Last resort: try standard CSV read
+            # Standard CSV read with extra cleaning
             if self._df is None or len(self._df.columns) < 5:
-                encodings = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252']
-                for encoding in encodings:
-                    try:
-                        self._df = pd.read_csv(csv_path, encoding=encoding, on_bad_lines='skip')
-                        if len(self._df.columns) > 10:
-                            break
-                    except:
-                        continue
+                # ... existing logic ...
+                try:
+                    self._df = pd.read_csv(csv_path, encoding='latin-1', on_bad_lines='skip')
+                except:
+                    pass
+
+            if self._df is not None:
+                # CRITICAL: Clean column names of any lingering HTML tags
+                def clean_col(c):
+                    c = str(c)
+                    if ">" in c: c = c.split(">")[-1]
+                    if "<" in c: c = c.split("<")[0]
+                    return c.strip()
+                
+                self._df.columns = [clean_col(c) for c in self._df.columns]
+                # Filter out any purely HTML rows if they exist
+                self._df = self._df[~self._df.iloc[:, 0].astype(str).str.contains('<html|</body>', na=False)]
             
             if self._df is None or len(self._df.columns) < 10:
-                raise RuntimeError(f"Could not load valid data (got {len(self._df.columns) if self._df is not None else 0} columns)")
+                raise RuntimeError(f"Could not load valid data")
             
             self._build_schema()
-            print(f"✓ Loaded {len(self._df)} rows, {len(self._df.columns)} columns")
+            print(f"Loaded {len(self._df)} rows, {len(self._df.columns)} columns")
         except Exception as e:
             raise RuntimeError(f"Failed to load data: {e}")
 

@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 
 const COLORS = ['#3B82F6', '#818CF8', '#6366F1', '#A5B4FC', '#C7D2FE'];
 
-const ChartCard = ({ type, title, data, dataKey, xAxisKey, delay, height = 240 }) => {
+const ChartCard = ({ type, title, data, dataKey, dataKeys, xAxisKey, delay, height = 240 }) => {
   if (!data || data.length === 0) {
     return (
       <motion.div
@@ -28,6 +28,8 @@ const ChartCard = ({ type, title, data, dataKey, xAxisKey, delay, height = 240 }
     );
   }
 
+  const activeKeys = dataKeys || [dataKey];
+
   const renderChart = () => {
     switch (type) {
       case 'line':
@@ -37,7 +39,17 @@ const ChartCard = ({ type, title, data, dataKey, xAxisKey, delay, height = 240 }
             <XAxis dataKey={xAxisKey} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
             <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', fontSize: '12px' }} />
-            <Line type="monotone" dataKey={dataKey} stroke="#3B82F6" strokeWidth={2} dot={{ r: 3, fill: '#3B82F6', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+            {activeKeys.map((key, index) => (
+              <Line 
+                key={key}
+                type="monotone" 
+                dataKey={key} 
+                stroke={COLORS[index % COLORS.length]} 
+                strokeWidth={2} 
+                dot={{ r: 3, fill: COLORS[index % COLORS.length], strokeWidth: 0 }} 
+                activeDot={{ r: 5 }} 
+              />
+            ))}
           </LineChart>
         );
       case 'bar':
@@ -47,13 +59,21 @@ const ChartCard = ({ type, title, data, dataKey, xAxisKey, delay, height = 240 }
             <XAxis dataKey={xAxisKey} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
             <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '12px' }} />
-            <Bar dataKey={dataKey} fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={20} />
+            {activeKeys.map((key, index) => (
+              <Bar 
+                key={key}
+                dataKey={key} 
+                fill={COLORS[index % COLORS.length]} 
+                radius={[4, 4, 0, 0]} 
+                barSize={20} 
+              />
+            ))}
           </BarChart>
         );
       case 'pie':
         return (
           <PieChart>
-            <Pie data={data} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4} dataKey={dataKey}>
+            <Pie data={data} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4} dataKey={activeKeys[0]}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
               ))}
@@ -66,7 +86,7 @@ const ChartCard = ({ type, title, data, dataKey, xAxisKey, delay, height = 240 }
           <ScatterChart>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
             <XAxis dataKey={xAxisKey} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
-            <YAxis dataKey={dataKey} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
+            <YAxis dataKey={activeKeys[0]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
             <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '12px' }} />
             <Scatter data={data} fill="#3B82F6" />
           </ScatterChart>
@@ -78,7 +98,17 @@ const ChartCard = ({ type, title, data, dataKey, xAxisKey, delay, height = 240 }
             <XAxis dataKey={xAxisKey} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
             <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', fontSize: '12px' }} />
-            <Area type="monotone" dataKey={dataKey} stroke="#3B82F6" fill="#DBEAFE" strokeWidth={2} />
+            {activeKeys.map((key, index) => (
+              <Area 
+                key={key}
+                type="monotone" 
+                dataKey={key} 
+                stroke={COLORS[index % COLORS.length]} 
+                fill={COLORS[index % COLORS.length]} 
+                fillOpacity={0.2}
+                strokeWidth={2} 
+              />
+            ))}
           </AreaChart>
         );
       case 'table':

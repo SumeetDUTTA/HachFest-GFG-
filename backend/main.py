@@ -119,9 +119,9 @@ def init_engines():
     try:
         llm_engine = LLMEngine()
         query_executor = QueryExecutor()
-        print("✓ LLM Engine and Query Executor initialized")
+        print("LLM Engine and Query Executor initialized")
     except Exception as e:
-        print(f"✗ Failed to initialize engines: {e}")
+        print(f"Error: Failed to initialize engines: {e}")
         raise
 
 # Pydantic models for request/response
@@ -156,6 +156,7 @@ class UploadCSVResponse(BaseModel):
 
 def _sanitize_error(error_message: str) -> str:
     """Avoid leaking implementation details in production responses."""
+    print(f"Backend Error: {error_message}") # Always log to console
     if ENABLE_DETAILED_ERRORS:
         return error_message
     return "Request failed. Please revise the prompt and try again."
@@ -224,6 +225,14 @@ def _process_dashboard_request(request: DashboardRequest, session_key: str) -> D
 
     if llm_result.get("error"):
         llm_message = llm_result.get("message", "LLM processing failed")
+        
+        # If it's a semantic error (user didn't specify enough info), return it gracefully
+        if "ambiguous" in llm_message.lower() or "specify" in llm_message.lower() or not any(x in llm_message.lower() for x in ["timeout", "timed out", "connected", "api error"]):
+            return DashboardResponse(
+                success=False,
+                error=llm_message
+            )
+
         timeout_detected = bool(re.search(r"timed out|timeout", llm_message, flags=re.IGNORECASE))
         unavailable_detected = "No compatible Ollama model found locally" in llm_message
 
